@@ -1,0 +1,101 @@
+# .github/workflows/main_ci_cd.yml
+name: BugHawkAI CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  backend-build-test-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install Python dependencies
+      working-directory: backend
+      run: |
+        python -m pip install --upgrade pip
+        pip install poetry  # Or use pip install -r requirements.txt if not using poetry
+        poetry install --no-root # If using poetry
+        # pip install -r requirements.txt # If using pip
+
+    - name: Run Backend Tests
+      working-directory: backend
+      run: |
+        poetry run pytest # Or `python -m pytest`
+
+    - name: Build and Push Docker Image (Optional - Requires DockerHub/GHCR setup)
+      # This step requires Docker login credentials configured as GitHub Secrets
+      # e.g., DOCKER_USERNAME, DOCKER_PASSWORD or GHCR_TOKEN
+      if: github.ref == 'refs/heads/main'
+      run: |
+        docker build -t bughawkai-backend ./backend
+        # docker tag bughawkai-backend your-docker-repo/bughawkai-backend:latest
+        # echo "{{ secrets.DOCKER_PASSWORD }}" | docker login --username "{{ secrets.DOCKER_USERNAME }}" --password-stdin
+        # docker push your-docker-repo/bughawkai-backend:latest
+
+    # - name: Deploy to Cloud Provider (e.g., Fly.io, Heroku, Azure, GCP, AWS)
+    #   if: github.ref == 'refs/heads/main'
+    #   uses: some-deployment-action@v1 # Replace with actual deployment action
+    #   with:
+    #     api_key: ${{ secrets.CLOUD_API_KEY }}
+    #     app_name: bughawkai-backend
+
+  mobile-ios-build-test:
+    runs-on: macos-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode_15.3.app # Or your preferred version
+
+    - name: Install Bundler and Pods (if using CocoaPods)
+      working-directory: mobile/ios
+      run: |
+        gem install bundler
+        bundle install
+        # pod install # If using CocoaPods
+
+    - name: Build iOS App
+      working-directory: mobile/ios
+      run: |
+        xcodebuild clean build -project BugHawkAI_iOS.xcodeproj -scheme BugHawkAI_iOS -destination 'platform=iOS Simulator,name=iPhone 15 Pro' CODE_SIGNING_ALLOWED=NO
+
+    # - name: Run iOS Tests
+    #   working-directory: mobile/ios
+    #   run: |
+    #     xcodebuild test -project BugHawkAI_iOS.xcodeproj -scheme BugHawkAI_iOS -destination 'platform=iOS Simulator,name=iPhone 15 Pro'
+
+  mobile-android-build-test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x ./mobile/android/gradlew
+
+    - name: Build Android App
+      working-directory: mobile/android
+      run: ./gradlew assembleDebug
+
+    # - name: Run Android Tests
+    #   working-directory: mobile/android
+    #   run: ./gradlew testDebugUnitTest

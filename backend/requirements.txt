@@ -1,0 +1,19 @@
+fastapi[all]
+uvicorn[standard]
+pydantic-settings
+python-dotenv
+# For PostgreSQL: psycopg2-binary
+# For SQLite: Leave default, or install a specific driver if needed
+# For LLM Integrations (choose based on your LLM):
+# openai
+# google-generativeai
+# anthropic
+# For static analysis tools, these are typically run as external binaries
+# or via specific Python wrappers, e.g.,
+# clang-format (often via system install)
+# swiftlint (brew install swiftlint, then call via subprocess)
+# detekt (gradle plugin, then call via subprocess)
+pytest
+httpx
+pytest-asyncio
+openai==1.82.0
